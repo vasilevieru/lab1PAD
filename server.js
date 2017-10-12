@@ -1,8 +1,6 @@
 var net = require('net');
-//var queue = require('queue');
+var fs = require('fs');
 var JsonSocket = require('json-socket');
-
-//var q = queue();
 
 // Keep track of the chat clients
 var clients = [];
@@ -12,6 +10,17 @@ var port = 5000;
 
 var server = net.createServer();
 server.listen(port);
+
+var json = JSON.parse(fs.readFileSync('/home/vasile/IdeaProjects/broker/broker', 'utf8'));
+
+console.log(json);
+
+console.log("coada");
+for (var i = 0; i < json.length; i++) {
+    results.push(json[i]);
+}
+console.log("Read successfully!");
+console.log(results);
 
 server.on('connection', function (socket) {
 
@@ -23,12 +32,22 @@ server.on('connection', function (socket) {
     socket.on('message', function (message) {
 
         if (!message.command) {
-            console.log(message.message);
-            results.push(message.message.toString());
+            results.push(message);
+            fs.writeFile("/home/vasile/IdeaProjects/broker/broker", JSON.stringify(results), function (err) {
+                if (err) {
+                    console.log(err.toString());
+                }
+                console.log("Message written with succes!");
+            });
+            console.log(message);
             console.log(results);
         } else if (message.command) {
             console.log(message.command);
-            socket.sendMessage({"sms": results.shift()});
+            if (results.length > 0) {
+                socket.sendMessage({"sms": results.shift()});
+            } else {
+                socket.sendMessage({"sms": "no messages in queue"});
+            }
         }
     });
 
