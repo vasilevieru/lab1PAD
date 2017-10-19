@@ -1,14 +1,15 @@
 var net = require('net');
 var readline = require('readline');
 var JsonSocket = require('json-socket');
-var event = require('events').EventEmitter.prototype._maxListeners = 0;
 
+var obj=null;
 var client = new JsonSocket(new net.Socket());
 
 client.connect(5000,'127.0.0.1');
 
 client.on('connect', function () {
     console.log('Connected');
+
 
     var rl = readline.createInterface({
         input: process.stdin,
@@ -17,7 +18,12 @@ client.on('connect', function () {
     });
 
     rl.on('line', function (line) {
-        client.sendMessage({"message":line});
+        obj = line;
+        var all = obj.split(' ');
+        var queue = all[1];
+        var message = all[0];
+
+        client.sendMessage({"queue": queue, "message":message});
     });
 });
 

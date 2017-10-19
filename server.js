@@ -4,23 +4,24 @@ var JsonSocket = require('json-socket');
 
 // Keep track of the chat clients
 var clients = [];
-var results = [];
-
+var object = new Object([]);
 var port = 5000;
 
 var server = net.createServer();
 server.listen(port);
 
-var json = JSON.parse(fs.readFileSync('/home/vasile/IdeaProjects/broker/broker', 'utf8'));
+const stats = fs.statSync("broker");
+const fileSizeInBytes = stats.size;
+var flag=0;
 
-console.log(json);
+if (fileSizeInBytes !== 0) {
+    var json = JSON.parse(fs.readFileSync('/home/vasile/IdeaProjects/broker/broker', 'utf8'));
 
-console.log("coada");
-for (var i = 0; i < json.length; i++) {
-    results.push(json[i]);
+    for (var i = 0; i < json.length; i++) {
+        object.push(json[i]);
+    }
+    console.log("Read successfully!");
 }
-console.log("Read successfully!");
-console.log(results);
 
 server.on('connection', function (socket) {
 
@@ -31,23 +32,42 @@ server.on('connection', function (socket) {
 
     socket.on('message', function (message) {
 
-        if (!message.command) {
-            results.push(message);
-            fs.writeFile("/home/vasile/IdeaProjects/broker/broker", JSON.stringify(results), function (err) {
+        if (!message.name_queue) {
+            console.log(message);
+            object.push(message);
+
+            fs.writeFile("/home/vasile/IdeaProjects/broker/broker", JSON.stringify(object), function (err) {
                 if (err) {
                     console.log(err.toString());
                 }
                 console.log("Message written with succes!");
             });
-            console.log(message);
-            console.log(results);
-        } else if (message.command) {
-            console.log(message.command);
-            if (results.length > 0) {
-                socket.sendMessage({"sms": results.shift()});
-            } else {
-                socket.sendMessage({"sms": "no messages in queue"});
+        }
+
+        if (object.length > 0) {
+            for (var i = 0; i < object.length; i++) {
+                if (message.name_queue === object[i].queue) {
+
+                    socket.sendMessage({"message": object[i]});
+                    flag = 1;
+                    delete object[i];
+                    object = object.filter(function (e) {
+                        return e
+                    });
+                    fs.writeFile("/home/vasile/IdeaProjects/broker/broker", JSON.stringify(object), function (err) {
+                        if (err) {
+                            console.log(err.toString());
+                        }
+                    });
+                    break;
+                }
             }
+            if (flag !== 1) {
+                socket.sendMessage({"message": "don't exists this queue"});
+                flag=0;
+            }
+        } else {
+            socket.sendMessage({"message": "no message in queue"});
         }
     });
 
